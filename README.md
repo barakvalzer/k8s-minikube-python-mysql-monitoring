@@ -72,27 +72,6 @@ Located at: `.github/workflows/deploy-argocd-helm.yaml`
 Maintained by [@barakvalzer](https://github.com/barakvalzer)
 ---
 
-## 🔄 ArgoCD Sync via GitHub Actions
-
-This repo includes a GitHub Actions workflow (`.github/workflows/deploy-argocd-helm.yaml`) that:
-
-- Installs the ArgoCD CLI
-- Logs in to your running ArgoCD server
-- Syncs the `flask-monitoring-app` application
-
-### Required GitHub Secrets
-
-| Secret Name        | Description                          |
-|--------------------|--------------------------------------|
-| `ARGOCD_SERVER`    | Your ArgoCD hostname or IP           |
-| `ARGOCD_USERNAME`  | Your ArgoCD username (e.g. `admin`)  |
-| `ARGOCD_PASSWORD`  | Your ArgoCD password                 |---
-
-## 🚀 Full Deployment Guide (Manual + GitHub Actions)
-
-This guide shows how to deploy the full stack and connect ArgoCD with GitHub Actions.
-
----
 
 ### 🛠 1. Prerequisites
 
@@ -174,11 +153,6 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 That's it! 🎉 You now have a full CI/CD pipeline for ArgoCD integrated with GitHub Actions.---
 
-## 🔐 How to Generate Secrets for Local Minikube ArgoCD
-
-If you're running ArgoCD inside **Minikube**, here's how to extract the credentials and configure GitHub Secrets manually:
-
----
 
 ### ✅ Step 1: Get ArgoCD Admin Password
 

@@ -1,29 +1,31 @@
-name: ArgoCD App Sync
+name: CI - Build and Validate
 
 on:
   push:
     branches: [main]
 
-env:
-  ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
-  ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
-  ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
-
 jobs:
-  sync:
+  build:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Install ArgoCD CLI
-      run: |
-        curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-        chmod +x argocd
-        sudo mv argocd /usr/local/bin/
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-    - name: Login and Sync ArgoCD Application
+    - name: Install dependencies
       run: |
-        argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
-        argocd app sync flask-monitoring-app
+        pip install -r app/requirements.txt
+
+    - name: Lint Python code
+      run: |
+        pip install flake8
+        flake8 app/
+
+    - name: Build Docker image
+      run: |
+        docker build -t flask-app:latest .
