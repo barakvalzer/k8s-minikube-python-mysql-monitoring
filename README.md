@@ -172,4 +172,62 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 ---
 
-That's it! 🎉 You now have a full CI/CD pipeline for ArgoCD integrated with GitHub Actions.
+That's it! 🎉 You now have a full CI/CD pipeline for ArgoCD integrated with GitHub Actions.---
+
+## 🔐 How to Generate Secrets for Local Minikube ArgoCD
+
+If you're running ArgoCD inside **Minikube**, here's how to extract the credentials and configure GitHub Secrets manually:
+
+---
+
+### ✅ Step 1: Get ArgoCD Admin Password
+
+Run this in your terminal:
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d && echo
+```
+
+This will output the default admin password.
+
+---
+
+### ✅ Step 2: Port-forward ArgoCD (if needed)
+
+Expose the ArgoCD UI and API locally:
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+Now your ArgoCD server is accessible at:  
+**`https://localhost:8080`**
+
+---
+
+### ✅ Step 3: Add GitHub Secrets
+
+Go to your repo → **Settings** → **Secrets and Variables** → **Actions**  
+Click **New repository secret** and create:
+
+| Secret Name         | Value                             |
+|---------------------|------------------------------------|
+| `ARGOCD_SERVER`     | `localhost:8080`                   |
+| `ARGOCD_USERNAME`   | `admin`                            |
+| `ARGOCD_PASSWORD`   | *(password from Step 1)*           |
+
+⚠️ You must keep the port-forward command running locally while testing this.
+
+---
+
+### 🧪 Optional: Verify from CLI
+
+```bash
+argocd login localhost:8080 --username admin --password <your-password> --insecure
+argocd app list
+```
+
+---
+
+This allows your GitHub Actions workflow to authenticate with your locally running ArgoCD in Minikube.
