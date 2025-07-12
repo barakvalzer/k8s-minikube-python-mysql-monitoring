@@ -1,0 +1,30 @@
+name: ArgoCD Sync
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Kubeconfig
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Install ArgoCD CLI
+      run: |
+        curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+        chmod +x argocd
+        sudo mv argocd /usr/local/bin/
+
+    - name: Sync ArgoCD Application
+      run: |
+        argocd login <ARGOCD_SERVER> --username admin --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
+        argocd app sync flask-monitoring-app
