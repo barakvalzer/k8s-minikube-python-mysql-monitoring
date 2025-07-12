@@ -1,0 +1,73 @@
+name: ArgoCD Helm Deployment with Dynamic Secret
+
+on:
+  push:
+    branches: [main]
+
+env:
+  GH_PAT: ${{ secrets.GH_PAT }}
+  REPO: barakvalzer/k8s-minikube-python-mysql-monitoring
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        pip install pynacl requests
+
+    - name: Generate ArgoCD secrets and push to GitHub
+      run: |
+        python scripts/create_github_secrets.py
+
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: latest
+
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: v3.13.3
+
+    - name: Add ArgoCD Helm repo
+      run: |
+        helm repo add argo https://argoproj.github.io/argo-helm
+        helm repo update
+
+    - name: Get secrets from GitHub and set them as env vars
+      run: |
+        echo "Fetching ArgoCD credentials from secrets..."
+      env:
+        ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+        ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
+        ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+
+    - name: Install ArgoCD with custom admin password
+      run: |
+        kubectl create namespace argocd || true
+        helm upgrade --install argocd argo/argo-cd           --namespace argocd           --set configs.secret.argocdServerAdminPassword="$ARGOCD_PASSWORD"
+
+    - name: Wait for ArgoCD server to be ready
+      run: |
+        kubectl rollout status deployment argocd-server -n argocd --timeout=120s
+
+    - name: Install ArgoCD CLI
+      run: |
+        curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+        chmod +x argocd
+        sudo mv argocd /usr/local/bin/
+
+    - name: Login and Sync Application
+      run: |
+        argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+        argocd app sync flask-monitoring-app
