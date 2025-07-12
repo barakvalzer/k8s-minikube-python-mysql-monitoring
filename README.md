@@ -31,35 +31,7 @@ minikube service grafana
 
 ---
 
-## 📦 ArgoCD Setup via GitHub Actions
 
-### GitHub Secrets Required
-
-| Secret Name        | Description                    |
-|--------------------|--------------------------------|
-| `GH_PAT`           | GitHub personal access token with `repo` and `admin:repo_hook` permissions |
-| `ARGOCD_SERVER`    | Your ArgoCD server URL (e.g., `argocd.example.com`) |
-
-> You do **not** need to manually define `ARGOCD_USERNAME` or `ARGOCD_PASSWORD`. They will be generated dynamically.
-
----
-
-## 🔐 Generate ArgoCD Username/Password Automatically
-
-The GitHub Actions workflow will:
-
-1. Run the script `scripts/create_github_secrets.py`
-2. Generate a random username and password
-3. Upload them as:
-   - `ARGOCD_USERNAME`
-   - `ARGOCD_PASSWORD`
-
-These secrets are then used for:
-- Installing ArgoCD via Helm with your chosen password
-- Logging into ArgoCD from GitHub Actions
-- Syncing your application (`flask-monitoring-app`)
-
----
 
 ## 🛠 GitHub Actions Workflow Summary
 
@@ -98,3 +70,106 @@ Located at: `.github/workflows/deploy-argocd-helm.yaml`
 ## 👨‍💻 Contributors
 
 Maintained by [@barakvalzer](https://github.com/barakvalzer)
+---
+
+## 🔄 ArgoCD Sync via GitHub Actions
+
+This repo includes a GitHub Actions workflow (`.github/workflows/deploy-argocd-helm.yaml`) that:
+
+- Installs the ArgoCD CLI
+- Logs in to your running ArgoCD server
+- Syncs the `flask-monitoring-app` application
+
+### Required GitHub Secrets
+
+| Secret Name        | Description                          |
+|--------------------|--------------------------------------|
+| `ARGOCD_SERVER`    | Your ArgoCD hostname or IP           |
+| `ARGOCD_USERNAME`  | Your ArgoCD username (e.g. `admin`)  |
+| `ARGOCD_PASSWORD`  | Your ArgoCD password                 |---
+
+## 🚀 Full Deployment Guide (Manual + GitHub Actions)
+
+This guide shows how to deploy the full stack and connect ArgoCD with GitHub Actions.
+
+---
+
+### 🛠 1. Prerequisites
+
+Ensure you have:
+- A running Kubernetes cluster (Minikube, EKS, GKE, etc.)
+- ArgoCD installed and accessible via hostname/IP
+- `argocd-server` exposed (e.g., NodePort or Ingress)
+- A valid ArgoCD username and password (e.g., admin)
+
+---
+
+### 🔐 2. Add GitHub Secrets
+
+Go to your GitHub repo → **Settings** → **Secrets and Variables** → **Actions**
+
+Click **New repository secret** and add the following:
+
+| Secret Name        | Value Example               |
+|--------------------|-----------------------------|
+| `ARGOCD_SERVER`    | `argocd.example.com` or `localhost:8080` |
+| `ARGOCD_USERNAME`  | `admin`                     |
+| `ARGOCD_PASSWORD`  | Your ArgoCD admin password  |
+
+---
+
+### ⚙️ 3. Push Your Code to GitHub
+
+Once the secrets are in place, any push to the `main` branch will trigger:
+
+- ArgoCD CLI installation
+- Login to your ArgoCD instance
+- Sync of the `flask-monitoring-app` defined in `k8s/argo/argocd-app.yaml`
+
+---
+
+### 📦 ArgoCD Application Manifest
+
+Located at: `k8s/argo/argocd-app.yaml`
+
+Make sure this file points to the correct path and repo:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-monitoring-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/YOUR_REPO
+    targetRevision: HEAD
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+> Don't forget to replace `repoURL` with your actual GitHub repo!
+
+---
+
+### ✅ 4. Verify in ArgoCD UI
+
+1. Port-forward ArgoCD if needed:
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+2. Visit [https://localhost:8080](https://localhost:8080)  
+3. Login with the credentials you provided in the secrets  
+4. You should see your `flask-monitoring-app` and its sync status
+
+---
+
+That's it! 🎉 You now have a full CI/CD pipeline for ArgoCD integrated with GitHub Actions.
